@@ -1,5 +1,5 @@
 language: java
 install: true
-script: if [[ "$TRAVIS_REPO_SLUG" == "immutables/miscellaneous" && "$TRAVIS_BRANCH" == "master" ]]; then mvn deploy -DdeployAtEnd=true --settings settings.xml -Psonatype-oss-release; else mvn package; fi
+script: if [[ "$TRAVIS_REPO_SLUG" == "immutables/miscellaneous" && "$TRAVIS_BRANCH" == "master" ]]; then mvn deploy -DdeployAtEnd=true --settings settings.xml -Psonatype-oss-snapshot; else mvn package; fi
 jdk:
   - oraclejdk8
