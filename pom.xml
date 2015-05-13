@@ -132,7 +132,7 @@
       </build>
     </profile>
     <profile>
-      <id>sonatype-oss-snapshot</id>
+      <id>javadoc</id>
       <build>
         <plugins>
           <plugin>
