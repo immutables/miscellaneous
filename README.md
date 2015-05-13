@@ -1,6 +1,6 @@
 # Miscellaneous
 
-[![Build Status](https://travis-ci.org/immutables/miscellaneous.svg?branch=master)](https://travis-ci.org/immutables/immutables)
+[![Build Status](https://travis-ci.org/immutables/miscellaneous.svg?branch=master)](https://travis-ci.org/immutables/miscellaneous)
 
 ## org.immutables.eventual
 
