@@ -15,8 +15,7 @@
  */
 /**
  * @see org.immutables.eventual.EventualModules
- * @see org.immutables.eventual.EventuallyAsync
- * @see org.immutables.eventual.EventuallyProvides
+ * @see org.immutables.eventual.Eventually
  */
 @javax.annotation.ParametersAreNonnullByDefault
 package org.immutables.eventual;

@@ -58,17 +58,18 @@ final class EventualProvidersModule<T> implements Module {
   private static TypeToken<ListenableFuture<?>> LISTENABLE_FUTURE = new TypeToken<ListenableFuture<?>>() {};
   private static Executor DEFAULT_EXECUTOR = MoreExecutors.directExecutor();
 
+  private final @Nullable T providersInstance;
   private final Class<T> providersClass;
   private final TypeToken<T> type;
 
   private final ImmutableList<EventualProvider<?>> providers;
-  @Nullable
-  private final Class<? extends Annotation> scopeAnnotation;
+  private final @Nullable Class<? extends Annotation> scopeAnnotation;
   private final Errors errors;
   private final Object source;
 
-  EventualProvidersModule(Class<T> providersClass) {
-    this.providersClass = providersClass;
+  EventualProvidersModule(@Nullable T providersInstance, Class<T> providerClass) {
+    this.providersInstance = providersInstance;
+    this.providersClass = providerClass;
     this.source = StackTraceElements.forType(providersClass);
     this.type = TypeToken.of(providersClass);
     this.errors = new Errors(source);
@@ -108,7 +109,7 @@ final class EventualProvidersModule<T> implements Module {
     for (Class<?> t : type.getTypes().classes().rawTypes()) {
       if (t != Object.class) {
         for (Method m : t.getDeclaredMethods()) {
-          if (m.isAnnotationPresent(EventuallyProvides.class)) {
+          if (m.isAnnotationPresent(Eventually.Provides.class)) {
             builder.add(
                 providerFor(
                     type.method(m),
@@ -123,7 +124,6 @@ final class EventualProvidersModule<T> implements Module {
 
   private EventualProvider<?> providerFor(Invokable<T, ?> method, Object source) {
     Errors methodErrors = errors.withSource(source);
-
     Annotation[] annotations = method.getAnnotations();
 
     verifyMethodAccessibility(methodErrors, method, source);
@@ -157,9 +157,10 @@ final class EventualProvidersModule<T> implements Module {
         Annotations.findScopeAnnotation(methodErrors, annotations);
     if (methodScopeAnnotation != null) {
       methodErrors.addMessage(
-          "Misplaced scope annotation @%s on method @%s %s.%n\tScope annotation will be inherited from enclosing class %s",
+          "Misplaced scope annotation @%s on method @%s %s."
+              + "\n\tScope annotation will only be inherited from enclosing class %s",
           methodScopeAnnotation.getSimpleName(),
-          EventuallyProvides.class.getSimpleName(),
+          Eventually.Provides.class.getSimpleName(),
           source,
           providersClass.getSimpleName());
     }
@@ -172,7 +173,7 @@ final class EventualProvidersModule<T> implements Module {
         || method.isSynthetic()) {
       methodErrors.addMessage(
           "Method @%s %s must not be private, static or abstract",
-          EventuallyProvides.class.getSimpleName(),
+          Eventually.Provides.class.getSimpleName(),
           source);
     } else if (!method.isPublic()) {
       method.setAccessible(true);
@@ -255,13 +256,21 @@ final class EventualProvidersModule<T> implements Module {
     }
 
     @com.google.inject.Inject(optional = true)
-    @EventuallyAsync
+    @Eventually.Async
     Executor executor = DEFAULT_EXECUTOR;
 
     @Inject
     void init(Injector injector) {
       dependencyProviders = providersForDependencies(injector);
-      targetInstanceProvider = injector.getProvider(providersClass);
+      targetInstanceProvider = providersInstance == null
+          ? injector.getProvider(providersClass)
+          : new Provider<T>() {
+            @Override
+            public T get() {
+              injector.injectMembers(providersInstance);
+              return providersInstance;
+            }
+          };
     }
 
     private List<Provider<ListenableFuture<?>>> providersForDependencies(Injector injector) {
@@ -310,7 +319,7 @@ final class EventualProvidersModule<T> implements Module {
 
     private AsyncFunction<List<Object>, V> derivationFunction(final T targetInstance) {
       return new AsyncFunction<List<Object>, V>() {
-        // Safe unchecked: type checks was done during introspection
+        // safe unchecked: type checks was done during introspection
         @SuppressWarnings("unchecked")
         @Override
         public ListenableFuture<V> apply(List<Object> input) throws Exception {
@@ -318,7 +327,7 @@ final class EventualProvidersModule<T> implements Module {
           if (result == null) {
             throw new NullPointerException(
                 String.format("Method @%s %s should not return null",
-                    EventuallyProvides.class.getSimpleName(),
+                    Eventually.Provides.class.getSimpleName(),
                     source));
           }
           if (result instanceof ListenableFuture<?>) {

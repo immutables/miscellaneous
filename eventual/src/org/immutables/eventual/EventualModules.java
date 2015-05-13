@@ -7,31 +7,32 @@
 package org.immutables.eventual;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.inject.Exposed;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import java.util.concurrent.Executor;
 
 /**
  * Creates special mix-in module created from defining class with special asynchronous
- * transformation methods annotated with {@literal @}{@link EventuallyProvides}.
+ * transformation methods annotated with {@literal @}{@link Eventually.Provides}.
  * <p>
  * Basic example
  * 
  * <pre>
  * public class Providers {
- *   {@literal @}EventuallyProvides
+ *   {@literal @}Eventually.Provides
  *   C combine(A a, B b) {
  *     return new C(a.value(), b.getProperty());
  *   }
  * 
  *   {@literal @}Exposed
- *   {@literal @}EventuallyProvides
+ *   {@literal @}Eventually.Provides
  *   Z transformed(C c) {
  *     return c.transformed();
  *   }
  * }
  * 
- * Module module = EventualModules.definedBy(Providers.class);
+ * Module module = EventualModules.definedBy(new Providers);
  * </pre>
  * 
  * Having dependency on ListenableFuture&lt;A&gt; and ListenableFuture&lt;B&gt;, this module exposed
@@ -42,20 +43,45 @@ import java.util.concurrent.Executor;
  * functionality should be implemented or overridden.
  * </em>
  * <p>
+ * You can annotate class with the {@literal @}{@code Singleton} annotation to have all futures be
+ * singletons in module created by {@link #providedBy(Object)} module.
+ * <p>
  * To customize dispatching injector could provided with binding to {@literal @}
- * {@link EventuallyAsync} {@link Executor}
- * @see EventuallyProvides
- * @see EventuallyAsync
+ * {@link Eventually.Async} {@link Executor}
+ * @see Eventually
  */
 public final class EventualModules {
+  private EventualModules() {}
 
   /**
    * Create a module filled with futures combined in interdependencies.
-   * @param asyncProviderClass class which defined future transformations
+   * Use returned module separately or together with other module to create injector which
+   * will contain interrelated futures bounded, then use {@link #completedFrom(Injector)} create
+   * future module that binds all dereferenced future values which were {@link Exposed}.
+   * @param eventuallyProvider object which defined future transformations annotated with
+   *          {@link Eventually.Provides}
    * @return the module
    */
-  public static Module providedBy(Class<?> asyncProviderClass) {
-    return new EventualProvidersModule<>(asyncProviderClass);
+  // safe unchecked, will be used only for reading
+  @SuppressWarnings("unchecked")
+  public static Module providedBy(Object eventuallyProvider) {
+    if (eventuallyProvider instanceof Class<?>) {
+      return new EventualProvidersModule<>(null, (Class<?>) eventuallyProvider);
+    }
+    return new EventualProvidersModule<>(eventuallyProvider, (Class<Object>) eventuallyProvider.getClass());
+  }
+
+  /**
+   * Create a module filled with futures combined in interdependencies.
+   * Use returned module separately or together with other module to create injector which
+   * will contain interrelated futures bounded, then use {@link #completedFrom(Injector)} create
+   * future module that binds all dereferenced future values which were {@link Exposed}.
+   * @param eventuallyProvider class which defined future transformations annotated with
+   *          {@link Eventually.Provides}
+   * @return the module
+   */
+  public static Module providedBy(Class<?> eventuallyProvider) {
+    return providedBy((Object) eventuallyProvider);
   }
 
   /**

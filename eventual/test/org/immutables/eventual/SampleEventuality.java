@@ -31,20 +31,20 @@ public class SampleEventuality {
   List<Integer> tracker;
 
   @Exposed
-  @EventuallyProvides
+  @Eventually.Provides
   ListenableFuture<Boolean> getInput(@Named("input") String input) {
     tracker.add(1);
     return Futures.immediateFuture(Boolean.parseBoolean(input));
   }
 
-  @EventuallyProvides
+  @Eventually.Provides
   @Named("second")
   String getSecond(Boolean go) {
     tracker.add(2);
     return "second=" + go;
   }
 
-  @EventuallyProvides
+  @Eventually.Provides
   @Named("first")
   String getFirst(Boolean go) {
     checkArgument(go);
@@ -53,7 +53,7 @@ public class SampleEventuality {
   }
 
   @Exposed
-  @EventuallyProvides
+  @Eventually.Provides
   @Named("separator")
   String separator() {
     tracker.add(0);
@@ -61,7 +61,7 @@ public class SampleEventuality {
   }
 
   @Exposed
-  @EventuallyProvides
+  @Eventually.Provides
   @Named("output")
   String output(
       @Named("first") String first,

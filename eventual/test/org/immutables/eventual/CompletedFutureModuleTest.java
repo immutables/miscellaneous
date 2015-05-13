@@ -15,6 +15,7 @@
  */
 package org.immutables.eventual;
 
+import javax.inject.Singleton;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Exposed;
@@ -27,7 +28,7 @@ import static org.immutables.check.Checkers.check;
 public class CompletedFutureModuleTest {
   @Test
   public void futuresDereferencing() {
-    Injector injectorWithFutures = Guice.createInjector(EventualModules.providedBy(SampleFutureProvider.class));
+    Injector injectorWithFutures = Guice.createInjector(EventualModules.providedBy(new SampleFutureProvider()));
     ListenableFuture<Module> futureModule = EventualModules.completedFrom(injectorWithFutures);
     Injector resultModule = Guice.createInjector(Futures.getUnchecked(futureModule));
 
@@ -35,15 +36,16 @@ public class CompletedFutureModuleTest {
     check(resultModule.getInstance(String.class)).is("a");
   }
 
+  @Singleton
   static class SampleFutureProvider {
     @Exposed
-    @EventuallyProvides
+    @Eventually.Provides
     Integer integer() {
       return 1;
     }
 
     @Exposed
-    @EventuallyProvides
+    @Eventually.Provides
     String string() {
       return "a";
     }
