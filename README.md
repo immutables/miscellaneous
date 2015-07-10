@@ -92,3 +92,27 @@ On the very abstract level this library achives transformation: `P(A, B... Z) ->
 
 The alternative would be to use plain composition of futures. But even with java 8 lambdas, it's still might be cumbersome to reason about complicated chains of transformation. But, definitely, this kind of utility might be also be built specifically for Java 8 without using Guice.
 This is built with Guava's `ListenableFuture` and not with `CompletableFuture`, sorry.
+
+## org.immutables.eventual
+
+FluentIterable/Stream-like operations on pairs of values, modeled as `Iterable` of `Map.Entry<K, V>`.
+
+Examples
+
+```java
+EntryIterable.zippingIndex(ImmutableList.of("a", "b"))
+    .transformValues((i, s) -> s + i)
+    .toMap()
+    // "{0=a0, 1=b1}";
+```
+
+```java
+EntryIterable.zipping(ImmutableList.of("a", "b"), ImmutableList.of(1, 1))
+    .inverse()
+    .groupByKey()
+    .mapValues(v -> Joiner.on(':').join(v))
+    .first()
+    .get()
+    .getValue()
+    // "a:b"
+```
