@@ -30,6 +30,15 @@ public class EntryIterableTest {
   }
 
   @Test
+  public void zippingWith() {
+    check(EntryIterable.zippingWith(ImmutableList.of("a", "b", "a"), a -> "_" + a)
+        .mapValues(a -> a + "_")
+        .asValues()
+        .toList())
+        .isOf("_a_", "_b_", "_a_");
+  }
+
+  @Test
   public void zippingAndCollapse() {
     check(EntryIterable.zipping(ImmutableList.of("a", "b"), ImmutableList.of(1, 1))
         .inverse()

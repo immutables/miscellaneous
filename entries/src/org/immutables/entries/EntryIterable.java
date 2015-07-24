@@ -84,6 +84,28 @@ public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
     });
   }
 
+  public static <V, T> EntryIterable<V, T> zippingWith(
+      Iterable<? extends V> values,
+      Function<? super V, T> function) {
+    return from(new Iterable<Entry<V, T>>() {
+      @Override
+      public Iterator<Entry<V, T>> iterator() {
+        return new AbstractIterator<Entry<V, T>>() {
+          Iterator<? extends V> vs = values.iterator();
+
+          @Override
+          protected Entry<V, T> computeNext() {
+            if (vs.hasNext()) {
+              V v = vs.next();
+              return entry(v, function.apply(v));
+            }
+            return endOfData();
+          }
+        };
+      }
+    });
+  }
+
   public static <K, V> EntryIterable<K, V> zipping(
       Iterable<? extends K> keys,
       Iterable<? extends V> values) {
