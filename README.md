@@ -90,7 +90,20 @@ On the very abstract level this library achives transformation: `P(A, B... Z) ->
 * use injector to get future (_completedFrom_) module `F[M(A, B... Z)]`
 * when future is fulfilled, you create injector `I(A, B... Z)` from the dereferenced module.
 
-The alternative would be to use plain composition of futures. But even with java 8 lambdas, it's still might be cumbersome to reason about complicated chains of transformation. But, definitely, this kind of utility might be also be built specifically for Java 8 without using Guice.
+Builder was introduced to somewhat simplify composition of eventual provider modules.
+
+```java
+// Here's equivalent to the example above
+Injector resulting = new EventualModules.Builder()
+    .add(new Providers())
+    .joinInjector();
+// See other builder methods:
+// .skipFailed()
+// .asyncExecutor(Executor)
+// .toFuture()
+```
+
+The alternative to the solution would be to use plain composition of futures. But even with java 8 lambdas, it's still might be cumbersome to reason about complicated chains of transformation. Definitely, this kind of utility might be also be built specifically for Java 8 without using Guice.
 This is built with Guava's `ListenableFuture` and not with `CompletableFuture`, sorry.
 
 ## org.immutables.entries
