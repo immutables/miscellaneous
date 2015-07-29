@@ -27,13 +27,23 @@ import static org.immutables.check.Checkers.check;
 
 public class CompletedFutureModuleTest {
   @Test
-  public void futuresDereferencing() {
+  public void dereferencing() {
     Injector injectorWithFutures = Guice.createInjector(EventualModules.providedBy(new SampleFutureProvider()));
     ListenableFuture<Module> futureModule = EventualModules.completedFrom(injectorWithFutures);
     Injector resultModule = Guice.createInjector(Futures.getUnchecked(futureModule));
 
     check(resultModule.getInstance(Integer.class)).is(1);
     check(resultModule.getInstance(String.class)).is("a");
+  }
+
+  @Test
+  public void builder() {
+    Injector injector = new EventualModules.Builder()
+        .add(new SampleFutureProvider())
+        .joinInjector();
+
+    check(injector.getInstance(Integer.class)).is(1);
+    check(injector.getInstance(String.class)).is("a");
   }
 
   @Singleton
