@@ -49,13 +49,24 @@ final class CompletedFutureModule implements Module {
     }
   }
 
-  static ListenableFuture<Module> from(Injector futureInjecting) {
+  enum CompletionCriteria {
+    ALL,
+    SUCCESSFUL;
+
+    ListenableFuture<List<Object>> asFutureList(List<ListenableFuture<?>> futures) {
+      return this == SUCCESSFUL
+          ? Futures.successfulAsList(futures)
+          : Futures.allAsList(futures);
+    }
+  }
+
+  static ListenableFuture<Module> from(Injector futureInjecting, CompletionCriteria criteria) {
     final Map<Key<?>, Key<?>> futureTargetKeys = futureBridgeKeysFor(futureInjecting);
 
-    ListenableFuture<List<Object>> allFuture =
-        Futures.allAsList(getFutureInstances(futureTargetKeys.keySet(), futureInjecting));
+    ListenableFuture<List<Object>> completed = criteria.asFutureList(
+        getFutureInstances(futureTargetKeys.keySet(), futureInjecting));
 
-    return Futures.transform(allFuture, moduleBindingMapper(futureTargetKeys.values()));
+    return Futures.transform(completed, moduleBindingMapper(futureTargetKeys.values()));
   }
 
   private static Function<List<Object>, Module> moduleBindingMapper(Iterable<Key<?>> targetKeys) {

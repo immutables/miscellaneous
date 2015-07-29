@@ -6,6 +6,7 @@
  */
 package org.immutables.eventual;
 
+import com.google.inject.Key;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
@@ -18,6 +19,9 @@ import com.google.inject.Module;
 import com.google.inject.PrivateBinder;
 import java.util.List;
 import java.util.concurrent.Executor;
+import javax.annotation.Nullable;
+import org.immutables.eventual.CompletedFutureModule.CompletionCriteria;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Creates special mix-in module created from defining class with special asynchronous
@@ -70,7 +74,7 @@ public final class EventualModules {
    * @return the module
    */
   public static Module providedBy(Object eventuallyProvider) {
-    return new EventualModule(createPartial(eventuallyProvider));
+    return new EventualModule(createPartial(checkNotNull(eventuallyProvider)));
   }
 
   /**
@@ -94,7 +98,18 @@ public final class EventualModules {
    * @return the future module
    */
   public static ListenableFuture<Module> completedFrom(Injector futureInjecting) {
-    return CompletedFutureModule.from(futureInjecting);
+    return CompletedFutureModule.from(checkNotNull(futureInjecting), CompletionCriteria.ALL);
+  }
+
+  /**
+   * Converts injector which injects future values into the future for module, which is when
+   * instantiated as injector could inject unwrapped values from successfull futures found in input
+   * injector. Failed futures will be omitted from injector, Care need to be taken
+   * @param futureInjecting the injector of future values
+   * @return the future module
+   */
+  public static ListenableFuture<Module> successfulFrom(Injector futureInjecting) {
+    return CompletedFutureModule.from(checkNotNull(futureInjecting), CompletionCriteria.SUCCESSFUL);
   }
 
   // safe unchecked, will be used only for reading
@@ -129,14 +144,16 @@ public final class EventualModules {
   public static final class Builder {
     private final List<Module> modules = Lists.newArrayList();
     private final List<EventualProviders<?>> partials = Lists.newArrayList();
+    private @Nullable Executor executor;
+    private boolean skipFailed;
 
     public Builder add(Module module) {
-      modules.add(module);
+      modules.add(checkNotNull(module));
       return this;
     }
 
     public Builder add(Object providersInstance) {
-      partials.add(createPartial(providersInstance));
+      partials.add(createPartial(checkNotNull(providersInstance)));
       return this;
     }
 
@@ -144,8 +161,21 @@ public final class EventualModules {
       return add((Object) providersClass);
     }
 
+    public Builder asyncExecutor(Executor executor) {
+      this.executor = checkNotNull(executor);
+      return this;
+    }
+
+    public Builder skipFailed() {
+      skipFailed = true;
+      return this;
+    }
+
     public ListenableFuture<Module> toFuture() {
-      return completedFrom(Guice.createInjector(eventualModules()));
+      Injector futureInjecting = Guice.createInjector(eventualModules());
+      return skipFailed
+          ? successfulFrom(futureInjecting)
+          : completedFrom(futureInjecting);
     }
 
     public Injector joinInjector() {
@@ -156,7 +186,20 @@ public final class EventualModules {
     private List<Module> eventualModules() {
       List<Module> result = Lists.newArrayList(modules);
       result.add(new EventualModule(Iterables.toArray(partials, EventualProviders.class)));
+      addExecutorBindingIfSpecified(result);
       return result;
+    }
+
+    private void addExecutorBindingIfSpecified(List<Module> result) {
+      if (executor != null) {
+        result.add(new Module() {
+          @Override
+          public void configure(Binder binder) {
+            binder.bind(Key.get(Executor.class, Eventually.Async.class))
+                .toInstance(executor);
+          }
+        });
+      }
     }
   }
 }

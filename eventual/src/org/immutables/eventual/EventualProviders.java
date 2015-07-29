@@ -298,14 +298,14 @@ final class EventualProviders<T> {
 
     @Override
     public ListenableFuture<V> get() {
-      ListenableFuture<List<Object>> resolved = Futures.allAsList(resolvedDependecies());
-      ListenableFuture<V> derived =
+      ListenableFuture<List<Object>> inputParameters = Futures.allAsList(resolvedDependecies());
+      ListenableFuture<V> outputResult =
           Futures.transform(
-              resolved,
-              derivationFunction(targetInstanceProvider.get()),
+              inputParameters,
+              transformFunction(targetInstanceProvider.get()),
               executor);
 
-      return Futures.withFallback(derived, this);
+      return Futures.withFallback(outputResult, this);
     }
 
     private ImmutableList<ListenableFuture<?>> resolvedDependecies() {
@@ -314,7 +314,7 @@ final class EventualProviders<T> {
           .toList();
     }
 
-    private AsyncFunction<List<Object>, V> derivationFunction(final T targetInstance) {
+    private AsyncFunction<List<Object>, V> transformFunction(final T targetInstance) {
       return new AsyncFunction<List<Object>, V>() {
         // safe unchecked: type checks was done during introspection
         @SuppressWarnings("unchecked")
