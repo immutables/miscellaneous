@@ -30,11 +30,9 @@ import com.google.common.util.concurrent.FutureFallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.inject.Binder;
 import com.google.inject.Exposed;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.Module;
 import com.google.inject.PrivateBinder;
 import com.google.inject.Provider;
 import com.google.inject.TypeLiteral;
@@ -54,7 +52,7 @@ import java.util.concurrent.Executor;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
-final class EventualProvidersModule<T> implements Module {
+final class EventualProviders<T> {
   private static TypeToken<ListenableFuture<?>> LISTENABLE_FUTURE = new TypeToken<ListenableFuture<?>>() {};
   private static Executor DEFAULT_EXECUTOR = MoreExecutors.directExecutor();
 
@@ -67,7 +65,7 @@ final class EventualProvidersModule<T> implements Module {
   private final Errors errors;
   private final Object source;
 
-  EventualProvidersModule(@Nullable T providersInstance, Class<T> providerClass) {
+  EventualProviders(@Nullable T providersInstance, Class<T> providerClass) {
     this.providersInstance = providersInstance;
     this.providersClass = providerClass;
     this.source = StackTraceElements.forType(providersClass);
@@ -77,8 +75,7 @@ final class EventualProvidersModule<T> implements Module {
     this.providers = introspectProviders();
   }
 
-  @Override
-  public void configure(Binder binder) {
+  void configure(PrivateBinder binder) {
     binder = binder.withSource(source);
 
     if (errors.hasErrors()) {
@@ -86,11 +83,11 @@ final class EventualProvidersModule<T> implements Module {
         binder.addError(message);
       }
     } else {
-      bindWithPrivateBinder(binder.newPrivateBinder());
+      bindProvidersInScope(binder);
     }
   }
 
-  private void bindWithPrivateBinder(PrivateBinder privateBinder) {
+  private void bindProvidersInScope(PrivateBinder privateBinder) {
     ScopedBindingBuilder scoper = privateBinder.bind(providersClass);
 
     if (scopeAnnotation != null) {
@@ -359,7 +356,7 @@ final class EventualProvidersModule<T> implements Module {
     String[] trimmedPrefixes = {
         Futures.class.getPackage().getName(),
         Invokable.class.getPackage().getName(),
-        EventualProvidersModule.class.getName()
+        EventualProviders.class.getName()
     };
     List<StackTraceElement> list = Lists.newArrayListWithExpectedSize(stackTrace.length);
     stackLines: for (int i = 0; i < stackTrace.length; i++) {
