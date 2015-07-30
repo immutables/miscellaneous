@@ -33,10 +33,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-final class CompletedFutureModule implements Module {
+final class CompletedModule implements Module {
   private final Map<Key<?>, Object> instances;
 
-  private CompletedFutureModule(Map<Key<?>, Object> instances) {
+  private CompletedModule(Map<Key<?>, Object> instances) {
     this.instances = instances;
   }
 
@@ -78,7 +78,7 @@ final class CompletedFutureModule implements Module {
         for (int i = 0; i < keys.length; i++) {
           builder.put(keys[i], input.get(i));
         }
-        return new CompletedFutureModule(builder.build());
+        return new CompletedModule(builder.build());
       }
     };
   }

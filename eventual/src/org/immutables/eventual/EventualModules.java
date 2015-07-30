@@ -20,7 +20,7 @@ import com.google.inject.PrivateBinder;
 import java.util.List;
 import java.util.concurrent.Executor;
 import javax.annotation.Nullable;
-import org.immutables.eventual.CompletedFutureModule.CompletionCriteria;
+import org.immutables.eventual.CompletedModule.CompletionCriteria;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
@@ -98,7 +98,7 @@ public final class EventualModules {
    * @return the future module
    */
   public static ListenableFuture<Module> completedFrom(Injector futureInjecting) {
-    return CompletedFutureModule.from(checkNotNull(futureInjecting), CompletionCriteria.ALL);
+    return CompletedModule.from(checkNotNull(futureInjecting), CompletionCriteria.ALL);
   }
 
   /**
@@ -109,30 +109,30 @@ public final class EventualModules {
    * @return the future module
    */
   public static ListenableFuture<Module> successfulFrom(Injector futureInjecting) {
-    return CompletedFutureModule.from(checkNotNull(futureInjecting), CompletionCriteria.SUCCESSFUL);
+    return CompletedModule.from(checkNotNull(futureInjecting), CompletionCriteria.SUCCESSFUL);
   }
 
   // safe unchecked, will be used only for reading
   @SuppressWarnings("unchecked")
-  private static EventualProviders<?> createPartial(Object eventuallyProvider) {
+  private static Providers<?> createPartial(Object eventuallyProvider) {
     if (eventuallyProvider instanceof Class<?>) {
-      return new EventualProviders<>(null, (Class<?>) eventuallyProvider);
+      return new Providers<>(null, (Class<?>) eventuallyProvider);
     }
-    return new EventualProviders<>(eventuallyProvider, (Class<Object>) eventuallyProvider.getClass());
+    return new Providers<>(eventuallyProvider, (Class<Object>) eventuallyProvider.getClass());
   }
 
   /** This is done to group providers partials with a single private binder when using builder. */
   private static class EventualModule implements Module {
-    private final EventualProviders<?>[] partials;
+    private final Providers<?>[] partials;
 
-    EventualModule(EventualProviders<?>... partials) {
+    EventualModule(Providers<?>... partials) {
       this.partials = partials;
     }
 
     @Override
     public void configure(Binder binder) {
       PrivateBinder privateBinder = binder.newPrivateBinder();
-      for (EventualProviders<?> partial : partials) {
+      for (Providers<?> partial : partials) {
         partial.configure(privateBinder);
       }
     }
@@ -143,7 +143,7 @@ public final class EventualModules {
    */
   public static final class Builder {
     private final List<Module> modules = Lists.newArrayList();
-    private final List<EventualProviders<?>> partials = Lists.newArrayList();
+    private final List<Providers<?>> partials = Lists.newArrayList();
     private @Nullable Executor executor;
     private boolean skipFailed;
 
@@ -185,7 +185,7 @@ public final class EventualModules {
 
     private List<Module> eventualModules() {
       List<Module> result = Lists.newArrayList(modules);
-      result.add(new EventualModule(Iterables.toArray(partials, EventualProviders.class)));
+      result.add(new EventualModule(Iterables.toArray(partials, Providers.class)));
       addExecutorBindingIfSpecified(result);
       return result;
     }

@@ -44,15 +44,21 @@ import com.google.inject.spi.Dependency;
 import com.google.inject.spi.Message;
 import com.google.inject.spi.ProviderWithDependencies;
 import java.lang.annotation.Annotation;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
+import javax.inject.Qualifier;
 
-final class EventualProviders<T> {
+final class Providers<T> {
   private static TypeToken<ListenableFuture<?>> LISTENABLE_FUTURE = new TypeToken<ListenableFuture<?>>() {};
   private static Executor DEFAULT_EXECUTOR = MoreExecutors.directExecutor();
 
@@ -65,7 +71,7 @@ final class EventualProviders<T> {
   private final Errors errors;
   private final Object source;
 
-  EventualProviders(@Nullable T providersInstance, Class<T> providerClass) {
+  Providers(@Nullable T providersInstance, Class<T> providerClass) {
     this.providersInstance = providersInstance;
     this.providersClass = providerClass;
     this.source = StackTraceElements.forType(providersClass);
@@ -137,8 +143,15 @@ final class EventualProviders<T> {
       dependencies.add(extractDependency(methodErrors, parameter));
     }
 
-    Key<ListenableFuture<?>> bindingKey = futureKey(method.getReturnType(), bindingAnnotation);
+    Key<ListenableFuture<?>> bindingKey;
     boolean exposedBinding = method.isAnnotationPresent(Exposed.class);
+
+    if (isVoid(method)) {
+      bindingKey = futureKey(TypeToken.of(Boolean.class), new BlackholedAnnotation());
+      exposedBinding = false;
+    } else {
+      bindingKey = futureKey(method.getReturnType(), bindingAnnotation);
+    }
 
     return new EventualProvider<>(
         method,
@@ -282,12 +295,16 @@ final class EventualProviders<T> {
       binder = binder.withSource(source);
 
       ScopedBindingBuilder scoper = binder.bind(bindingKey).toProvider(this);
-      if (scopeAnnotation != null) {
-        scoper.in(scopeAnnotation);
-      }
 
-      if (exposedBinding) {
-        binder.expose(bindingKey);
+      if (isVoid(method)) {
+        scoper.asEagerSingleton();
+      } else {
+        if (scopeAnnotation != null) {
+          scoper.in(scopeAnnotation);
+        }
+        if (exposedBinding) {
+          binder.expose(bindingKey);
+        }
       }
     }
 
@@ -320,7 +337,10 @@ final class EventualProviders<T> {
         @SuppressWarnings("unchecked")
         @Override
         public ListenableFuture<V> apply(List<Object> input) throws Exception {
-          Object result = method.invoke(targetInstance, input.toArray());
+          @Nullable Object result = method.invoke(targetInstance, input.toArray());
+          if (isVoid(method)) {
+            result = true;
+          }
           if (result == null) {
             throw new NullPointerException(
                 String.format("Method @%s %s should not return null",
@@ -352,11 +372,17 @@ final class EventualProviders<T> {
     }
   }
 
+  /** Checks if we need special logic for void side-effect only methods. */
+  private static boolean isVoid(Invokable<?, ?> method) {
+    Class<?> raw = method.getReturnType().getRawType();
+    return raw == void.class || raw == Void.class;
+  }
+
   private static StackTraceElement[] trimStackTrace(StackTraceElement[] stackTrace) {
     String[] trimmedPrefixes = {
         Futures.class.getPackage().getName(),
         Invokable.class.getPackage().getName(),
-        EventualProviders.class.getName()
+        Providers.class.getName()
     };
     List<StackTraceElement> list = Lists.newArrayListWithExpectedSize(stackTrace.length);
     stackLines: for (int i = 0; i < stackTrace.length; i++) {
@@ -370,5 +396,39 @@ final class EventualProviders<T> {
       list.add(element);
     }
     return list.toArray(new StackTraceElement[list.size()]);
+  }
+
+  /**
+   * Annotation created to be unique blackhole binding to sink void values without clash inside
+   * injector.
+   */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
+  @interface Blackholed {
+    long value();
+  }
+
+  /** Each instance has random value */
+  @SuppressWarnings("all")
+  private static class BlackholedAnnotation implements Blackholed {
+    private static final Random random = new Random();
+
+    private final long value = random.nextLong();
+
+    @Override
+    public Class<? extends Annotation> annotationType() {
+      return Blackholed.class;
+    }
+
+    @Override
+    public long value() {
+      return value;
+    }
+
+    @Override
+    public String toString() {
+      return "@" + Blackholed.class.getSimpleName() + "(" + Long.toHexString(value) + ")";
+    }
   }
 }
