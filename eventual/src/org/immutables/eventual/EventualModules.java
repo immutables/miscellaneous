@@ -94,22 +94,22 @@ public final class EventualModules {
    * Converts injector which injects future values into the future for module, which is when
    * instantiated as injector could inject unwrapped values from completed futures found in input
    * injector.
-   * @param futureInjecting the injector of future values
+   * @param injectingFutures the injector of future values
    * @return the future module
    */
-  public static ListenableFuture<Module> completedFrom(Injector futureInjecting) {
-    return CompletedModule.from(checkNotNull(futureInjecting), CompletionCriteria.ALL);
+  public static ListenableFuture<Module> completedFrom(Injector injectingFutures) {
+    return CompletedModule.from(checkNotNull(injectingFutures), CompletionCriteria.ALL);
   }
 
   /**
    * Converts injector which injects future values into the future for module, which is when
    * instantiated as injector could inject unwrapped values from successfull futures found in input
    * injector. Failed futures will be omitted from injector, Care need to be taken
-   * @param futureInjecting the injector of future values
+   * @param injectingFutures the injector of future values
    * @return the future module
    */
-  public static ListenableFuture<Module> successfulFrom(Injector futureInjecting) {
-    return CompletedModule.from(checkNotNull(futureInjecting), CompletionCriteria.SUCCESSFUL);
+  public static ListenableFuture<Module> successfulFrom(Injector injectingFutures) {
+    return CompletedModule.from(checkNotNull(injectingFutures), CompletionCriteria.SUCCESSFUL);
   }
 
   // safe unchecked, will be used only for reading
@@ -121,7 +121,7 @@ public final class EventualModules {
     return new Providers<>(eventuallyProvider, (Class<Object>) eventuallyProvider.getClass());
   }
 
-  /** This is done to group providers partials with a single private binder when using builder. */
+  /** Group providers partials with a single private binder when using builder. */
   private static class EventualModule implements Module {
     private final Providers<?>[] partials;
 
@@ -186,17 +186,17 @@ public final class EventualModules {
     private List<Module> eventualModules() {
       List<Module> result = Lists.newArrayList(modules);
       result.add(new EventualModule(Iterables.toArray(partials, Providers.class)));
-      addExecutorBindingIfSpecified(result);
+      addExecutorIfAny(result);
       return result;
     }
 
-    private void addExecutorBindingIfSpecified(List<Module> result) {
+    private void addExecutorIfAny(List<Module> result) {
       if (executor != null) {
         result.add(new Module() {
           @Override
           public void configure(Binder binder) {
-            binder.bind(Key.get(Executor.class, Eventually.Async.class))
-                .toInstance(executor);
+            Key<Executor> key = Key.get(Executor.class, Eventually.Async.class);
+            binder.bind(key).toInstance(executor);
           }
         });
       }

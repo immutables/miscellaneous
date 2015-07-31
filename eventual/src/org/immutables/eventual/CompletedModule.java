@@ -16,7 +16,6 @@
 package org.immutables.eventual;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -28,59 +27,56 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import java.lang.reflect.ParameterizedType;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
+import javax.annotation.Nullable;
 
 final class CompletedModule implements Module {
-  private final Map<Key<?>, Object> instances;
+  private final Key<?>[] keys;
+  private final Object[] instances;
 
-  private CompletedModule(Map<Key<?>, Object> instances) {
+  private CompletedModule(Key<?>[] keys, Object[] instances) {
+    assert keys.length == instances.length;
+    this.keys = keys;
     this.instances = instances;
   }
 
   @Override
   public void configure(Binder binder) {
-    for (Entry<Key<?>, Object> entry : instances.entrySet()) {
+    for (int i = 0; i < keys.length; i++) {
       // safe cast, key and value known to have corresponding types
-      @SuppressWarnings("unchecked") Key<Object> key = (Key<Object>) entry.getKey();
-      binder.bind(key).toInstance(entry.getValue());
+      @SuppressWarnings("unchecked") Key<Object> key = (Key<Object>) keys[i];
+      @Nullable Object instance = instances[i];
+      // instance might be null for failed/skipped futures
+      if (instance != null) {
+        binder.bind(key).toInstance(instance);
+      }
     }
   }
 
   enum CompletionCriteria {
     ALL,
-    SUCCESSFUL;
-
-    ListenableFuture<List<Object>> asFutureList(List<ListenableFuture<?>> futures) {
-      return this == SUCCESSFUL
-          ? Futures.successfulAsList(futures)
-          : Futures.allAsList(futures);
-    }
+    SUCCESSFUL
   }
 
-  static ListenableFuture<Module> from(Injector futureInjecting, CompletionCriteria criteria) {
-    final Map<Key<?>, Key<?>> futureTargetKeys = futureBridgeKeysFor(futureInjecting);
+  static ListenableFuture<Module> from(Injector injectingFutures, CompletionCriteria criteria) {
+    LinkedHashMap<Key<?>, Key<?>> keyMapping = mapUnfutureKeys(injectingFutures);
+    List<ListenableFuture<?>> listOfFutures = getFutureInstances(keyMapping.keySet(), injectingFutures);
 
-    ListenableFuture<List<Object>> completed = criteria.asFutureList(
-        getFutureInstances(futureTargetKeys.keySet(), futureInjecting));
+    ListenableFuture<List<Object>> futureOfList =
+        criteria == CompletionCriteria.SUCCESSFUL
+            ? Futures.successfulAsList(listOfFutures)
+            : Futures.allAsList(listOfFutures);
 
-    return Futures.transform(completed, moduleBindingMapper(futureTargetKeys.values()));
-  }
+    return Futures.transform(futureOfList, new Function<List<Object>, Module>() {
+      Key<?>[] keys = Iterables.toArray(keyMapping.values(), Key.class);
 
-  private static Function<List<Object>, Module> moduleBindingMapper(Iterable<Key<?>> targetKeys) {
-    final Key<?>[] keys = Iterables.toArray(targetKeys, Key.class);
-    return new Function<List<Object>, Module>() {
       @Override
-      public Module apply(List<Object> input) {
-        ImmutableMap.Builder<Key<?>, Object> builder = ImmutableMap.builder();
-        for (int i = 0; i < keys.length; i++) {
-          builder.put(keys[i], input.get(i));
-        }
-        return new CompletedModule(builder.build());
+      public Module apply(List<Object> instances) {
+        return new CompletedModule(keys, instances.toArray());
       }
-    };
+    });
   }
 
   private static List<ListenableFuture<?>> getFutureInstances(Set<Key<?>> keys, Injector injector) {
@@ -91,8 +87,8 @@ final class CompletedModule implements Module {
     return futures;
   }
 
-  private static Map<Key<?>, Key<?>> futureBridgeKeysFor(Injector injector) {
-    Map<Key<?>, Key<?>> futureBridgeKeys = Maps.newLinkedHashMap();
+  private static LinkedHashMap<Key<?>, Key<?>> mapUnfutureKeys(Injector injector) {
+    LinkedHashMap<Key<?>, Key<?>> keyMapping = Maps.newLinkedHashMap();
 
     for (Key<?> key : injector.getBindings().keySet()) {
       TypeLiteral<?> typeLiteral = key.getTypeLiteral();
@@ -100,9 +96,9 @@ final class CompletedModule implements Module {
       if (ListenableFuture.class.isAssignableFrom(typeLiteral.getRawType())) {
         ParameterizedType parametrizedType = ((ParameterizedType) typeLiteral.getType());
         TypeLiteral<?> deferefencedType = TypeLiteral.get(parametrizedType.getActualTypeArguments()[0]);
-        futureBridgeKeys.put(key, key.ofType(deferefencedType));
+        keyMapping.put(key, key.ofType(deferefencedType));
       }
     }
-    return futureBridgeKeys;
+    return keyMapping;
   }
 }
