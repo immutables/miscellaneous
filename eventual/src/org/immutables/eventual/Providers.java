@@ -57,10 +57,18 @@ import java.util.concurrent.Executor;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Qualifier;
+import org.immutables.eventual.EventualModules.Invoker;
 
 final class Providers<T> {
-  private static TypeToken<ListenableFuture<?>> LISTENABLE_FUTURE = new TypeToken<ListenableFuture<?>>() {};
-  private static Executor DEFAULT_EXECUTOR = MoreExecutors.directExecutor();
+  private static final TypeToken<ListenableFuture<?>> LISTENABLE_FUTURE = new TypeToken<ListenableFuture<?>>() {};
+  private static final Executor DEFAULT_EXECUTOR = MoreExecutors.directExecutor();
+  private static final Invoker DEFAULT_INVOKER = new Invoker() {
+    @Override
+    public <T, R> R invoke(Invokable<T, R> invokable, T receiver, Object... objects)
+        throws InvocationTargetException, IllegalAccessException {
+      return invokable.invoke(receiver, objects);
+    }
+  };
 
   private final @Nullable T providersInstance;
   private final Class<T> providersClass;
@@ -230,7 +238,7 @@ final class Providers<T> {
     }
   }
 
-  private class EventualProvider<V>
+  private final class EventualProvider<V>
       implements ProviderWithDependencies<ListenableFuture<V>>,
       FutureFallback<V> {
 
@@ -268,6 +276,9 @@ final class Providers<T> {
     @com.google.inject.Inject(optional = true)
     @Eventually.Async
     Executor executor = DEFAULT_EXECUTOR;
+
+    @com.google.inject.Inject(optional = true)
+    Invoker invoker = DEFAULT_INVOKER;
 
     @Inject
     void init(Injector injector) {
@@ -337,7 +348,7 @@ final class Providers<T> {
         @SuppressWarnings("unchecked")
         @Override
         public ListenableFuture<V> apply(List<Object> input) throws Exception {
-          @Nullable Object result = method.invoke(targetInstance, input.toArray());
+          @Nullable Object result = invoker.invoke(method, targetInstance, input.toArray());
           if (isVoid(method)) {
             result = true;
           }

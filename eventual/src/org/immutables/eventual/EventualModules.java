@@ -6,9 +6,9 @@
  */
 package org.immutables.eventual;
 
-import com.google.inject.Key;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.reflect.Invokable;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Binder;
@@ -17,9 +17,9 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.PrivateBinder;
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.concurrent.Executor;
-import javax.annotation.Nullable;
 import org.immutables.eventual.CompletedModule.CompletionCriteria;
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -63,6 +63,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public final class EventualModules {
   private EventualModules() {}
+
+  public interface Invoker {
+    <T, R> R invoke(Invokable<T, R> invokable, T instance, Object... objects)
+        throws InvocationTargetException, IllegalAccessException;
+  }
 
   /**
    * Create a module filled with futures combined in interdependencies.
@@ -144,7 +149,6 @@ public final class EventualModules {
   public static final class Builder {
     private final List<Module> modules = Lists.newArrayList();
     private final List<Providers<?>> partials = Lists.newArrayList();
-    private @Nullable Executor executor;
     private boolean skipFailed;
 
     public Builder add(Module module) {
@@ -159,11 +163,6 @@ public final class EventualModules {
 
     public Builder add(Class<?> providersClass) {
       return add((Object) providersClass);
-    }
-
-    public Builder asyncExecutor(Executor executor) {
-      this.executor = checkNotNull(executor);
-      return this;
     }
 
     public Builder skipFailed() {
@@ -186,20 +185,7 @@ public final class EventualModules {
     private List<Module> eventualModules() {
       List<Module> result = Lists.newArrayList(modules);
       result.add(new EventualModule(Iterables.toArray(partials, Providers.class)));
-      addExecutorIfAny(result);
       return result;
-    }
-
-    private void addExecutorIfAny(List<Module> result) {
-      if (executor != null) {
-        result.add(new Module() {
-          @Override
-          public void configure(Binder binder) {
-            Key<Executor> key = Key.get(Executor.class, Eventually.Async.class);
-            binder.bind(key).toInstance(executor);
-          }
-        });
-      }
     }
   }
 }
