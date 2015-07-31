@@ -6,6 +6,8 @@
  */
 package org.immutables.eventual;
 
+import com.google.common.util.concurrent.UncheckedExecutionException;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.reflect.Invokable;
@@ -178,8 +180,15 @@ public final class EventualModules {
     }
 
     public Injector joinInjector() {
-      Module module = Futures.getUnchecked(toFuture());
-      return Guice.createInjector(module);
+      try {
+        Module module = Futures.getUnchecked(toFuture());
+        return Guice.createInjector(module);
+      } catch (UncheckedExecutionException ex) {
+        Throwables.propagateIfInstanceOf(ex.getCause(), RuntimeException.class);
+        throw Throwables.propagate(ex);
+      } catch (Exception ex) {
+        throw Throwables.propagate(ex);
+      }
     }
 
     private List<Module> eventualModules() {
