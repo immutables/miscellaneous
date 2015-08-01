@@ -16,6 +16,7 @@
 package org.immutables.eventual;
 
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
@@ -121,10 +122,11 @@ final class Providers<T> {
       if (t != Object.class) {
         for (Method m : t.getDeclaredMethods()) {
           if (m.isAnnotationPresent(Eventually.Provides.class)) {
-            builder.add(
-                providerFor(
-                    type.method(m),
-                    StackTraceElements.forMember(m)));
+            Errors methodErrors = errors.withSource(StackTraceElements.forMember(m));
+            Invokable<T, Object> invokable = type.method(m);
+            if (eligibilityVerified(invokable, methodErrors)) {
+              builder.add(providerFor(invokable, methodErrors));
+            }
           }
         }
       }
@@ -133,8 +135,31 @@ final class Providers<T> {
     return builder.build();
   }
 
-  private EventualProvider<?> providerFor(Invokable<T, ?> method, Object source) {
-    Errors methodErrors = errors.withSource(source);
+  private boolean eligibilityVerified(Invokable<T, Object> method, Errors errors) {
+    List<TypeToken<?>> primitiveTypes = Lists.newArrayList();
+
+    for (Parameter parameter : method.getParameters()) {
+      if (parameter.getType().isPrimitive()) {
+        primitiveTypes.add(parameter.getType());
+      }
+    }
+
+    if (method.getReturnType().isPrimitive() && !isVoid(method)) {
+      primitiveTypes.add(method.getReturnType());
+    }
+
+    if (!primitiveTypes.isEmpty()) {
+      errors.addMessage("Incompartible eventual provider method '%s'"
+          + "\n\tSignature has primitive types: %s."
+          + " Please use boxed types instead",
+          method.getName(),
+          Joiner.on(", ").join(primitiveTypes));
+    }
+
+    return primitiveTypes.isEmpty();
+  }
+
+  private EventualProvider<?> providerFor(Invokable<T, ?> method, Errors methodErrors) {
     Annotation[] annotations = method.getAnnotations();
 
     verifyMethodAccessibility(methodErrors, method, source);

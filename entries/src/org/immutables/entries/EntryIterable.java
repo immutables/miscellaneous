@@ -15,14 +15,13 @@
  */
 package org.immutables.entries;
 
-import java.util.function.BiConsumer;
-import java.util.Optional;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
@@ -31,13 +30,15 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
- * Lazy transformed fluent iterable of {@code Map.Entry<K, V>}
+ * Lazily transformed fluent iterable of {@code Map.Entry<K, V>}
  * @param <K> key, left type
  * @param <V> va
  */
@@ -45,20 +46,16 @@ import javax.annotation.concurrent.NotThreadSafe;
 public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
   protected EntryIterable() {}
 
-  public <T, W> EntryIterable<T, W> transformEntries(BiFunction<? super K, ? super V, Entry<T, W>> function) {
+  public <T, W> EntryIterable<T, W> mapEntries(BiFunction<? super K, ? super V, Entry<T, W>> function) {
     return from(transform(e -> function.apply(e.getKey(), e.getValue())));
   }
 
   private <T, W> Iterable<Entry<T, W>> transform(Function<Entry<K, V>, Entry<T, W>> function) {
-    return asEntries().transform(function::apply);
+    return entries().transform(function::apply);
   }
 
   public EntryIterable<K, V> filter(BiPredicate<? super K, ? super V> predicate) {
-    return from(asEntries().filter(e -> predicate.test(e.getKey(), e.getValue())));
-  }
-
-  public FluentIterable<Entry<K, V>> asEntries() {
-    return FluentIterable.from(this);
+    return from(entries().filter(e -> predicate.test(e.getKey(), e.getValue())));
   }
 
   public static <K, V> EntryIterable<K, V> of(K key, V value) {
@@ -128,7 +125,7 @@ public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
   }
 
   public void forEach(BiConsumer<K, V> consumer) {
-    asEntries().forEach(e -> consumer.accept(e.getKey(), e.getValue()));
+    entries().forEach(e -> consumer.accept(e.getKey(), e.getValue()));
   }
 
   public static <K, V> EntryIterable<K, V> index(
@@ -182,35 +179,77 @@ public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
     });
   }
 
-  public FluentIterable<V> asValues() {
-    return asEntries().transform(Entry::getValue);
+  public FluentIterable<V> values() {
+    return entries().transform(Entry::getValue);
   }
 
-  public FluentIterable<K> asKeys() {
-    return asEntries().transform(Entry::getKey);
+  public FluentIterable<K> keys() {
+    return entries().transform(Entry::getKey);
   }
 
-  public <W> EntryIterable<K, W> transformValues(BiFunction<? super K, ? super V, W> function) {
+  public FluentIterable<Entry<K, V>> entries() {
+    return FluentIterable.from(this);
+  }
+
+  public <T, W> EntryIterable<T, W> map(
+      Function<? super K, T> keyFunction,
+      Function<? super V, W> valueFunction) {
+    return from(transform(e -> {
+      T t = keyFunction.apply(e.getKey());
+      W w = valueFunction.apply(e.getValue());
+      return entry(t, w);
+    }));
+  }
+
+  public <W> EntryIterable<K, W> map(BiFunction<? super K, ? super V, W> function) {
     return from(transform(e -> {
       K k = e.getKey();
+      W w = function.apply(k, e.getValue());
+      return entry(k, w);
+    }));
+  }
+
+  public <W> EntryIterable<K, W> flatMap(BiFunction<? super K, ? super V, ? extends Iterable<W>> function) {
+    return from(entries().transformAndConcat(e -> {
+      K k = e.getKey();
       V v = e.getValue();
-      return entry(k, function.apply(k, v));
+
+      Iterable<W> c = function.apply(k, v);
+
+      Iterable<Entry<K, W>> entries =
+          Iterables.transform(c, w -> entry(k, w));
+
+      return entries;
+    }));
+  }
+
+  public <W> EntryIterable<K, W> flatMapValues(Function<? super V, ? extends Iterable<W>> function) {
+    return from(entries().transformAndConcat(e -> {
+      K k = e.getKey();
+      V v = e.getValue();
+
+      Iterable<W> c = function.apply(v);
+
+      Iterable<Entry<K, W>> entries =
+          Iterables.transform(c, w -> entry(k, w));
+
+      return entries;
     }));
   }
 
   public <W> EntryIterable<K, W> mapValues(Function<? super V, W> function) {
     return from(transform(e -> {
       K k = e.getKey();
-      V v = e.getValue();
-      return entry(k, function.apply(v));
+      W w = function.apply(e.getValue());
+      return entry(k, w);
     }));
   }
 
   public <T> EntryIterable<T, V> mapKeys(Function<? super K, T> function) {
     return from(transform(e -> {
-      K k = e.getKey();
+      T t = function.apply(e.getKey());
       V v = e.getValue();
-      return entry(function.apply(k), v);
+      return entry(t, v);
     }));
   }
 
@@ -228,7 +267,7 @@ public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
 
   public Optional<Entry<K, V>> first() {
     return Optional.ofNullable(
-        asEntries().first().orNull());
+        entries().first().orNull());
   }
 
   public static <K, V> Entry<K, V> entry(K key, V value) {

@@ -25,7 +25,7 @@ public class EntryIterableTest {
   @Test
   public void zippingIndex() {
     check(EntryIterable.zippingIndex(ImmutableList.of("a", "b"))
-        .transformValues((i, s) -> s + i)
+        .map((i, s) -> s + i)
         .toMap()).hasToString("{0=a0, 1=b1}");
   }
 
@@ -33,7 +33,7 @@ public class EntryIterableTest {
   public void zippingWith() {
     check(EntryIterable.zippingWith(ImmutableList.of("a", "b", "a"), a -> "_" + a)
         .mapValues(a -> a + "_")
-        .asValues()
+        .values()
         .toList())
         .isOf("_a_", "_b_", "_a_");
   }
