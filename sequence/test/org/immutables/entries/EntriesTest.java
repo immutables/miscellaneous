@@ -25,14 +25,14 @@ import static org.immutables.check.Checkers.check;
 public class EntriesTest {
   @Test
   public void zippingIndex() {
-    check(Entries.zippingIndex(ImmutableList.of("a", "b"))
+    check(Entries.zipIndex(ImmutableList.of("a", "b"))
         .map((i, s) -> s + i)
         .toMap()).hasToString("{0=a0, 1=b1}");
   }
 
   @Test
   public void zippingWith() {
-    check(Entries.zippingWith(ImmutableList.of("a", "b", "a"), a -> "_" + a)
+    check(Entries.zipWith(ImmutableList.of("a", "b", "a"), a -> "_" + a)
         .mapValues(a -> a + "_")
         .values()
         .toList())
@@ -41,7 +41,7 @@ public class EntriesTest {
 
   @Test
   public void zippingAndCollapse() {
-    check(Entries.zipping(ImmutableList.of("a", "b"), ImmutableList.of(1, 1))
+    check(Entries.zip(ImmutableList.of("a", "b"), ImmutableList.of(1, 1))
         .inverse()
         .groupByKey()
         .mapValues(v -> Joiner.on(':').join(v))

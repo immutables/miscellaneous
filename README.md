@@ -106,21 +106,23 @@ Injector resulting = new EventualModules.Builder()
 The alternative to the solution would be to use plain composition of futures. But even with java 8 lambdas, it's still might be cumbersome to reason about complicated chains of transformation. Definitely, this kind of utility might be also be built specifically for Java 8 without using Guice.
 This is built with Guava's `ListenableFuture` and not with `CompletableFuture`, sorry.
 
-## org.immutables.entries
+## org.immutables.sequence
 
 FluentIterable/Stream-like operations on pairs of values, modeled as `Iterable` of `Map.Entry<K, V>`.
+FluentIterable ported to java 8 types as Sequence. This is so far the best way to use both Guava and Java 8: use Sequence instead of FluentIterable or Streams. This work better for us than using integration via collector (but collector `Sequence.toSequence()` is available).
 
 Examples
 
 ```java
-EntryIterable.zippingIndex(ImmutableList.of("a", "b"))
-    .transformValues((i, s) -> s + i)
+Sequence.from(ImmutableList.of("a", "b"))
+    .zipIndex()
+    .map((i, s) -> s + i)
     .toMap()
     // "{0=a0, 1=b1}";
 ```
 
 ```java
-EntryIterable.zipping(ImmutableList.of("a", "b"), ImmutableList.of(1, 1))
+Entries.zip(ImmutableList.of("a", "b"), ImmutableList.of(1, 1))
     .inverse()
     .groupByKey()
     .mapValues(v -> Joiner.on(':').join(v))

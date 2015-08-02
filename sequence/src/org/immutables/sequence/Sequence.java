@@ -211,11 +211,23 @@ public abstract class Sequence<E> implements Iterable<E> {
    * @return derived sequence
    * @since 18.0
    */
-  @SafeVarargs
   @Beta
   @CheckReturnValue
+  @SafeVarargs
   public final Sequence<E> append(E... elements) {
     return from(Iterables.concat(iterable, Arrays.asList(elements)));
+  }
+
+  public final <V> Entries<E, V> zip(Iterable<V> iterable) {
+    return Entries.zip(this, iterable);
+  }
+
+  public final Entries<Integer, E> zipIndex() {
+    return Entries.zipIndex(this);
+  }
+
+  public final <W> Entries<E, W> zipWith(Function<? super E, W> function) {
+    return Entries.zipWith(this, function);
   }
 
   /**

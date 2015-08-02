@@ -61,7 +61,7 @@ public abstract class Entries<K, V> implements Iterable<Entry<K, V>> {
     return from(ImmutableMap.of(key, value));
   }
 
-  public static <V> Entries<Integer, V> zippingIndex(Iterable<? extends V> values) {
+  public static <V> Entries<Integer, V> zipIndex(Iterable<? extends V> values) {
     return from(new Iterable<Entry<Integer, V>>() {
       @Override
       public Iterator<Entry<Integer, V>> iterator() {
@@ -80,7 +80,7 @@ public abstract class Entries<K, V> implements Iterable<Entry<K, V>> {
     });
   }
 
-  public static <V, T> Entries<V, T> zippingWith(
+  public static <V, T> Entries<V, T> zipWith(
       Iterable<? extends V> values,
       Function<? super V, T> function) {
     return from(new Iterable<Entry<V, T>>() {
@@ -103,7 +103,7 @@ public abstract class Entries<K, V> implements Iterable<Entry<K, V>> {
     });
   }
 
-  public static <K, V> Entries<K, V> zipping(
+  public static <K, V> Entries<K, V> zip(
       Iterable<? extends K> keys,
       Iterable<? extends V> values) {
     return from(new Iterable<Entry<K, V>>() {
