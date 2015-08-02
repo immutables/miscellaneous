@@ -17,7 +17,6 @@ package org.immutables.entries;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
@@ -51,7 +50,7 @@ public abstract class Entries<K, V> implements Iterable<Entry<K, V>> {
   }
 
   private <T, W> Iterable<Entry<T, W>> transform(Function<Entry<K, V>, Entry<T, W>> function) {
-    return entries().transform(function::apply);
+    return entries().map(function);
   }
 
   public Entries<K, V> filter(BiPredicate<? super K, ? super V> predicate) {
@@ -94,7 +93,8 @@ public abstract class Entries<K, V> implements Iterable<Entry<K, V>> {
           protected Entry<V, T> computeNext() {
             if (vs.hasNext()) {
               V v = vs.next();
-              return entry(v, function.apply(v));
+              T t = function.apply(v);
+              return entry(v, t);
             }
             return endOfData();
           }
@@ -179,16 +179,16 @@ public abstract class Entries<K, V> implements Iterable<Entry<K, V>> {
     });
   }
 
-  public FluentIterable<V> values() {
-    return entries().transform(Entry::getValue);
+  public Sequence<V> values() {
+    return entries().map(Entry::getValue);
   }
 
-  public FluentIterable<K> keys() {
-    return entries().transform(Entry::getKey);
+  public Sequence<K> keys() {
+    return entries().map(Entry::getKey);
   }
 
-  public FluentIterable<Entry<K, V>> entries() {
-    return FluentIterable.from(this);
+  public Sequence<Entry<K, V>> entries() {
+    return Sequence.from(this);
   }
 
   public <T, W> Entries<T, W> map(
@@ -210,7 +210,7 @@ public abstract class Entries<K, V> implements Iterable<Entry<K, V>> {
   }
 
   public <W> Entries<K, W> flatMap(BiFunction<? super K, ? super V, ? extends Iterable<W>> function) {
-    return from(entries().transformAndConcat(e -> {
+    return from(entries().flatMap(e -> {
       K k = e.getKey();
       V v = e.getValue();
 
@@ -224,7 +224,7 @@ public abstract class Entries<K, V> implements Iterable<Entry<K, V>> {
   }
 
   public <W> Entries<K, W> flatMapValues(Function<? super V, ? extends Iterable<W>> function) {
-    return from(entries().transformAndConcat(e -> {
+    return from(entries().flatMap(e -> {
       K k = e.getKey();
       V v = e.getValue();
 
@@ -266,8 +266,7 @@ public abstract class Entries<K, V> implements Iterable<Entry<K, V>> {
   }
 
   public Optional<Entry<K, V>> first() {
-    return Optional.ofNullable(
-        entries().first().orNull());
+    return entries().first();
   }
 
   public static <K, V> Entry<K, V> entry(K key, V value) {
