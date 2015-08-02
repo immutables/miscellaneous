@@ -21,17 +21,17 @@ import org.junit.Test;
 import static org.immutables.check.Checkers.check;
 
 // Need more tests
-public class EntryIterableTest {
+public class EntriesTest {
   @Test
   public void zippingIndex() {
-    check(EntryIterable.zippingIndex(ImmutableList.of("a", "b"))
+    check(Entries.zippingIndex(ImmutableList.of("a", "b"))
         .map((i, s) -> s + i)
         .toMap()).hasToString("{0=a0, 1=b1}");
   }
 
   @Test
   public void zippingWith() {
-    check(EntryIterable.zippingWith(ImmutableList.of("a", "b", "a"), a -> "_" + a)
+    check(Entries.zippingWith(ImmutableList.of("a", "b", "a"), a -> "_" + a)
         .mapValues(a -> a + "_")
         .values()
         .toList())
@@ -40,7 +40,7 @@ public class EntryIterableTest {
 
   @Test
   public void zippingAndCollapse() {
-    check(EntryIterable.zipping(ImmutableList.of("a", "b"), ImmutableList.of(1, 1))
+    check(Entries.zipping(ImmutableList.of("a", "b"), ImmutableList.of(1, 1))
         .inverse()
         .groupByKey()
         .mapValues(v -> Joiner.on(':').join(v))

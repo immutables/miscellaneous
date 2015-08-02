@@ -43,10 +43,10 @@ import javax.annotation.concurrent.NotThreadSafe;
  * @param <V> va
  */
 @NotThreadSafe
-public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
-  protected EntryIterable() {}
+public abstract class Entries<K, V> implements Iterable<Entry<K, V>> {
+  protected Entries() {}
 
-  public <T, W> EntryIterable<T, W> mapEntries(BiFunction<? super K, ? super V, Entry<T, W>> function) {
+  public <T, W> Entries<T, W> mapEntries(BiFunction<? super K, ? super V, Entry<T, W>> function) {
     return from(transform(e -> function.apply(e.getKey(), e.getValue())));
   }
 
@@ -54,15 +54,15 @@ public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
     return entries().transform(function::apply);
   }
 
-  public EntryIterable<K, V> filter(BiPredicate<? super K, ? super V> predicate) {
+  public Entries<K, V> filter(BiPredicate<? super K, ? super V> predicate) {
     return from(entries().filter(e -> predicate.test(e.getKey(), e.getValue())));
   }
 
-  public static <K, V> EntryIterable<K, V> of(K key, V value) {
+  public static <K, V> Entries<K, V> of(K key, V value) {
     return from(ImmutableMap.of(key, value));
   }
 
-  public static <V> EntryIterable<Integer, V> zippingIndex(Iterable<? extends V> values) {
+  public static <V> Entries<Integer, V> zippingIndex(Iterable<? extends V> values) {
     return from(new Iterable<Entry<Integer, V>>() {
       @Override
       public Iterator<Entry<Integer, V>> iterator() {
@@ -81,7 +81,7 @@ public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
     });
   }
 
-  public static <V, T> EntryIterable<V, T> zippingWith(
+  public static <V, T> Entries<V, T> zippingWith(
       Iterable<? extends V> values,
       Function<? super V, T> function) {
     return from(new Iterable<Entry<V, T>>() {
@@ -103,7 +103,7 @@ public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
     });
   }
 
-  public static <K, V> EntryIterable<K, V> zipping(
+  public static <K, V> Entries<K, V> zipping(
       Iterable<? extends K> keys,
       Iterable<? extends V> values) {
     return from(new Iterable<Entry<K, V>>() {
@@ -128,7 +128,7 @@ public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
     entries().forEach(e -> consumer.accept(e.getKey(), e.getValue()));
   }
 
-  public static <K, V> EntryIterable<K, V> index(
+  public static <K, V> Entries<K, V> index(
       Iterable<V> values,
       Function<? super V, K> keyFunction) {
     return from(new Iterable<Entry<K, V>>() {
@@ -141,7 +141,7 @@ public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
     });
   }
 
-  public static <K, V> EntryIterable<K, V> indexAll(
+  public static <K, V> Entries<K, V> indexAll(
       Iterable<V> values,
       Function<? super V, ? extends Iterable<? extends K>> keysFunction) {
     return from(new Iterable<Entry<K, V>>() {
@@ -158,8 +158,8 @@ public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
     });
   }
 
-  public EntryIterable<K, V> unique() {
-    EntryIterable<K, V> self = this;
+  public Entries<K, V> unique() {
+    Entries<K, V> self = this;
     return from(new Iterable<Entry<K, V>>() {
       @Override
       public Iterator<Entry<K, V>> iterator() {
@@ -170,7 +170,7 @@ public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
     });
   }
 
-  public EntryIterable<K, Collection<V>> groupByKey() {
+  public Entries<K, Collection<V>> groupByKey() {
     return from(new Iterable<Entry<K, Collection<V>>>() {
       @Override
       public Iterator<Entry<K, Collection<V>>> iterator() {
@@ -191,7 +191,7 @@ public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
     return FluentIterable.from(this);
   }
 
-  public <T, W> EntryIterable<T, W> map(
+  public <T, W> Entries<T, W> map(
       Function<? super K, T> keyFunction,
       Function<? super V, W> valueFunction) {
     return from(transform(e -> {
@@ -201,7 +201,7 @@ public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
     }));
   }
 
-  public <W> EntryIterable<K, W> map(BiFunction<? super K, ? super V, W> function) {
+  public <W> Entries<K, W> map(BiFunction<? super K, ? super V, W> function) {
     return from(transform(e -> {
       K k = e.getKey();
       W w = function.apply(k, e.getValue());
@@ -209,7 +209,7 @@ public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
     }));
   }
 
-  public <W> EntryIterable<K, W> flatMap(BiFunction<? super K, ? super V, ? extends Iterable<W>> function) {
+  public <W> Entries<K, W> flatMap(BiFunction<? super K, ? super V, ? extends Iterable<W>> function) {
     return from(entries().transformAndConcat(e -> {
       K k = e.getKey();
       V v = e.getValue();
@@ -223,7 +223,7 @@ public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
     }));
   }
 
-  public <W> EntryIterable<K, W> flatMapValues(Function<? super V, ? extends Iterable<W>> function) {
+  public <W> Entries<K, W> flatMapValues(Function<? super V, ? extends Iterable<W>> function) {
     return from(entries().transformAndConcat(e -> {
       K k = e.getKey();
       V v = e.getValue();
@@ -237,7 +237,7 @@ public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
     }));
   }
 
-  public <W> EntryIterable<K, W> mapValues(Function<? super V, W> function) {
+  public <W> Entries<K, W> mapValues(Function<? super V, W> function) {
     return from(transform(e -> {
       K k = e.getKey();
       W w = function.apply(e.getValue());
@@ -245,7 +245,7 @@ public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
     }));
   }
 
-  public <T> EntryIterable<T, V> mapKeys(Function<? super K, T> function) {
+  public <T> Entries<T, V> mapKeys(Function<? super K, T> function) {
     return from(transform(e -> {
       T t = function.apply(e.getKey());
       V v = e.getValue();
@@ -278,26 +278,26 @@ public abstract class EntryIterable<K, V> implements Iterable<Entry<K, V>> {
     return entry(entry.getValue(), entry.getKey());
   }
 
-  public EntryIterable<V, K> inverse() {
+  public Entries<V, K> inverse() {
     return from(transform(e -> inverseEntry(e)));
   }
 
-  public static <K, V> EntryIterable<K, V> from(Map<? extends K, ? extends V> map) {
+  public static <K, V> Entries<K, V> from(Map<? extends K, ? extends V> map) {
     return from(map.entrySet());
   }
 
-  public static <K, V> EntryIterable<K, V> from(Multimap<? extends K, ? extends V> map) {
+  public static <K, V> Entries<K, V> from(Multimap<? extends K, ? extends V> map) {
     return from(map.entries());
   }
 
   // safe unchecked: cannot insert anything and types are compartible on read
   @SuppressWarnings("unchecked")
-  public static <K, V> EntryIterable<K, V> from(
+  public static <K, V> Entries<K, V> from(
       Iterable<? extends Entry<? extends K, ? extends V>> iterable) {
-    if (iterable instanceof EntryIterable<?, ?>) {
-      return (EntryIterable<K, V>) iterable;
+    if (iterable instanceof Entries<?, ?>) {
+      return (Entries<K, V>) iterable;
     }
-    return new EntryIterable<K, V>() {
+    return new Entries<K, V>() {
       @Override
       public Iterator<Entry<K, V>> iterator() {
         return (Iterator<Entry<K, V>>) iterable.iterator();
