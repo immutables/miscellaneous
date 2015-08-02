@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.immutables.entries;
+package org.immutables.sequence;
 
 import com.google.common.annotations.Beta;
 import com.google.common.base.Joiner;
@@ -37,6 +37,7 @@ import java.util.Optional;
 import java.util.SortedSet;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collector;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import javax.annotation.CheckReturnValue;
@@ -44,17 +45,17 @@ import javax.annotation.Nullable;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * {@code FluentIterable} provides a rich interface for manipulating {@code Iterable} instances in a
- * chained fashion. A {@code FluentIterable} can be created from an {@code Iterable}, or from a set
- * of elements. The following types of methods are provided on {@code FluentIterable}:
+ * {@code Sequence} provides a rich interface for manipulating {@code Iterable} instances in a
+ * chained fashion. A {@code Sequence} can be created from an {@code Iterable}, or from a set
+ * of elements. The following types of methods are provided on {@code Sequence}:
  * <ul>
- * <li>chained methods which return a new {@code FluentIterable} based in some way on the contents
- * of the current one (for example {@link #map})
- * <li>conversion methods which copy the {@code FluentIterable}'s contents into a new collection or
- * array (for example {@link #toList})
+ * <li>chained methods which return a new {@code Sequence} based in some way on the contents of the
+ * current one (for example {@link #map})
+ * <li>conversion methods which copy the {@code Sequence}'s contents into a new collection or array
+ * (for example {@link #toList})
  * <li>element extraction methods which facilitate the retrieval of certain elements (for example
  * {@link #last})
- * <li>query methods which answer questions about the {@code FluentIterable}'s contents (for example
+ * <li>query methods which answer questions about the {@code Sequence}'s contents (for example
  * {@link #anyMatch})
  * </ul>
  * <p>
@@ -65,7 +66,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * <pre>
  * {@code
  * 
- *   FluentIterable
+ *   Sequence
  *       .from(database.getClientList())
  *       .filter(activeInLastMonth())
  *       .transform(Functions.toStringFunction())
@@ -73,16 +74,16 @@ import static com.google.common.base.Preconditions.checkNotNull;
  *       .toList();}
  * </pre>
  * <p>
- * Anything which can be done using {@code FluentIterable} could be done in a different fashion
- * (often with {@link Iterables}), however the use of {@code FluentIterable} makes many sets of
- * operations significantly more concise.
+ * Anything which can be done using {@code Sequence} could be done in a different fashion (often
+ * with {@link Iterables}), however the use of {@code Sequence} makes many sets of operations
+ * significantly more concise.
  * @author Marcin Mikosik
  * @param <E> element type
  * @since 12.0
  */
 public abstract class Sequence<E> implements Iterable<E> {
   // We store 'iterable' and use it instead of 'this' to allow Iterables to perform instanceof
-  // checks on the _original_ iterable when FluentIterable.from is used.
+  // checks on the _original_ iterable when Sequence.from is used.
   private final Iterable<E> iterable;
 
   /** Constructor for use by subclasses. */
@@ -100,7 +101,7 @@ public abstract class Sequence<E> implements Iterable<E> {
 
   /**
    * Returns a fluent iterable that wraps {@code iterable}, or {@code iterable} itself if it
-   * is already a {@code FluentIterable}.
+   * is already a {@code Sequence}.
    * @param <E> the element type
    * @param iterable the iterable
    * @return the sequence
@@ -118,12 +119,11 @@ public abstract class Sequence<E> implements Iterable<E> {
   /**
    * Construct a fluent iterable from another fluent iterable. This is obviously never necessary,
    * but is intended to help call out cases where one migration from {@code Iterable} to
-   * {@code FluentIterable} has obviated the need to explicitly convert to a {@code FluentIterable}.
+   * {@code Sequence} has obviated the need to explicitly convert to a {@code Sequence}.
    * @param <E> the element type
    * @param iterable the iterable
    * @return the sequence
-   * @deprecated instances of {@code FluentIterable} don't need to be converted to
-   *             {@code FluentIterable}
+   * @deprecated instances of {@code Sequence} don't need to be converted to {@code Sequence}
    */
   @Deprecated
   public static <E> Sequence<E> from(Sequence<E> iterable) {
@@ -411,10 +411,9 @@ public abstract class Sequence<E> implements Iterable<E> {
   }
 
   /**
-   * Returns an {@code ImmutableList} containing all of the elements from this
-   * {@code FluentIterable} in the order specified by {@code comparator}. To produce an
-   * {@code ImmutableList} sorted by its natural ordering, use
-   * {@code toSortedList(Ordering.natural())}.
+   * Returns an {@code ImmutableList} containing all of the elements from this {@code Sequence} in
+   * the order specified by {@code comparator}. To produce an {@code ImmutableList} sorted by its
+   * natural ordering, use {@code toSortedList(Ordering.natural())}.
    * @param comparator the function by which to sort list elements
    * @return the immutable list
    * @since 14.0 (since 13.0 as {@code toSortedImmutableList()}).
@@ -434,8 +433,8 @@ public abstract class Sequence<E> implements Iterable<E> {
   }
 
   /**
-   * Returns an {@code ImmutableSortedSet} containing all of the elements from this
-   * {@code FluentIterable} in the order specified by {@code comparator}, with duplicates
+   * Returns an {@code ImmutableSortedSet} containing all of the elements from this {@code Sequence}
+   * in the order specified by {@code comparator}, with duplicates
    * (determined by {@code comparator.compare(x, y) == 0}) removed. To produce an
    * {@code ImmutableSortedSet} sorted
    * by its natural ordering, use {@code toSortedSet(Ordering.natural())}.
@@ -448,7 +447,7 @@ public abstract class Sequence<E> implements Iterable<E> {
   }
 
   /**
-   * Returns an immutable map for which the elements of this {@code FluentIterable} are the keys in
+   * Returns an immutable map for which the elements of this {@code Sequence} are the keys in
    * the same order, mapped to values by the given function. If this iterable contains duplicate
    * elements, the returned map will contain each distinct element once in the order it first
    * appears.
@@ -463,7 +462,7 @@ public abstract class Sequence<E> implements Iterable<E> {
 
   /**
    * Creates an index {@code ImmutableListMultimap} that contains the results of applying a
-   * specified function to each item in this {@code FluentIterable} of values. Each element of this
+   * specified function to each item in this {@code Sequence} of values. Each element of this
    * iterable will be stored as a value in the resulting multimap, yielding a multimap with the same
    * size as this iterable. The key used to store that value in the multimap will be the result of
    * calling the function on that value. The resulting multimap is created as an immutable snapshot.
@@ -480,7 +479,7 @@ public abstract class Sequence<E> implements Iterable<E> {
 
   /**
    * Returns an immutable map for which the {@link java.util.Map#values} are the elements of this
-   * {@code FluentIterable} in the given order, and each key is the product of invoking a supplied
+   * {@code Sequence} in the given order, and each key is the product of invoking a supplied
    * function on its corresponding value.
    * @param <K> the key type
    * @param keyFunction the function used to produce the key for each value
@@ -555,6 +554,13 @@ public abstract class Sequence<E> implements Iterable<E> {
 
   public static <E> Function<Iterable<E>, Sequence<E>> fromIterable() {
     return FromIterableFunction.instance();
+  }
+
+  public static <T> Collector<T, Sequence<T>, Sequence<T>> toSequence() {
+    return Collector.of(
+        () -> Sequence.from(ImmutableList.<T>of()),
+        (a, t) -> a.append(t),
+        (a, b) -> a.append(b));
   }
 
   /**

@@ -20,7 +20,7 @@
 
   <modules>
     <module>eventual</module>
-    <module>entries</module>
+    <module>sequence</module>
   </modules>
 
   <organization>

@@ -15,6 +15,7 @@
  */
 package org.immutables.entries;
 
+import org.immutables.sequence.Entries;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import org.junit.Test;
