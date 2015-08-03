@@ -527,20 +527,13 @@ public abstract class Sequence<E> implements Iterable<E> {
   public final <C extends Collection<? super E>> C copyInto(C collection) {
     checkNotNull(collection);
     if (iterable instanceof Collection<?>) {
-      collection.addAll(castIterable(iterable));
+      collection.addAll((Collection<E>) iterable);
     } else {
       for (E item : iterable) {
         collection.add(item);
       }
     }
     return collection;
-  }
-
-  /**
-   * Used to avoid http://bugs.sun.com/view_bug.do?bug_id=6558557
-   */
-  private static <T> Collection<T> castIterable(Iterable<T> iterable) {
-    return (Collection<T>) iterable;
   }
 
   /**
