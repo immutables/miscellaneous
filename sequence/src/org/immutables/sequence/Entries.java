@@ -15,6 +15,7 @@
  */
 package org.immutables.sequence;
 
+import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
@@ -263,6 +264,12 @@ public abstract class Entries<K, V> implements Iterable<Entry<K, V>> {
     ImmutableListMultimap.Builder<K, V> builder = ImmutableListMultimap.builder();
     forEach(e -> builder.put(e));
     return builder.build();
+  }
+
+  public ImmutableSetMultimap<K, V> toSetMultimap() {
+    HashMultimap<K, V> buffer = HashMultimap.create();
+    forEach(e -> buffer.put(e.getKey(), e.getValue()));
+    return ImmutableSetMultimap.copyOf(buffer);
   }
 
   public Optional<Entry<K, V>> first() {

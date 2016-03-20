@@ -485,8 +485,12 @@ public abstract class Sequence<E> implements Iterable<E> {
    * @return the immutable list multimap
    * @since 14.0
    */
-  public final <K> ImmutableListMultimap<K, E> index(Function<? super E, K> keyFunction) {
+  public final <K> ImmutableListMultimap<K, E> toMultimap(Function<? super E, K> keyFunction) {
     return Multimaps.index(iterable, keyFunction::apply);
+  }
+
+  public final <K> Entries<K, E> index(Function<? super E, K> keyFunction) {
+    return Entries.index(iterable, keyFunction::apply);
   }
 
   /**

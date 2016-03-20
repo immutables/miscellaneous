@@ -21,6 +21,7 @@
   <modules>
     <module>eventual</module>
     <module>sequence</module>
+    <module>bench</module>
   </modules>
 
   <organization>
