@@ -1,8 +1,10 @@
+## THIS REPO IS DEPRECATED
+
 # Miscellaneous
 
-[![Build Status](https://travis-ci.org/immutables/miscellaneous.svg?branch=master)](https://travis-ci.org/immutables/miscellaneous)
-
 ## org.immutables.eventual
+
+**MOVED TO [immutables/eventual](https://github.com/immutables/eventual)**
 
 Guice add-ons to resolve future-provided dependencies.
 
