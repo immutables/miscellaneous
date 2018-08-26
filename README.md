@@ -4,7 +4,7 @@
 
 ## org.immutables.eventual
 
-**MOVED TO [immutables/eventual](https://github.com/immutables/eventual)**
+**!!!THIS MODULE MOVED TO [immutables/eventual](https://github.com/immutables/eventual)**
 
 Guice add-ons to resolve future-provided dependencies.
 
